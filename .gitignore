@@ -1,0 +1,10 @@
+csp-auto-log.txt
+.github-token
+*.zip
+Publish-To-GitHub.ps1
+GitHub-Login.bat
+Update.bat
+Update.ps1
+AutoUpdateSilent.vbs
+Setup-AutoUpdate.bat
+Remove-AutoUpdate.bat

@@ -44,6 +44,15 @@ function getTodayIsoDate() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+function calcDaysLeft(expiresIso) {
+  if (!expiresIso || !/^\d{4}-\d{2}-\d{2}$/.test(expiresIso)) return null;
+  const [y, m, d] = expiresIso.split("-").map(Number);
+  const exp = new Date(y, m - 1, d, 23, 59, 59, 999);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.floor((exp.getTime() - today.getTime()) / 86400000);
+}
+
 async function checkRemoteControl(force = false) {
   const localVer = chrome.runtime.getManifest().version;
   if (!isRemoteControlConfigured()) {
@@ -55,7 +64,11 @@ async function checkRemoteControl(force = false) {
       key: "",
       name: "Local Mode",
       expires: "",
+      daysLeft: null,
+      plan: "Local",
+      phone: "",
       notice: "",
+      localVersion: localVer,
       latestVersion: localVer,
       updateAvailable: false,
       checkedAt: Date.now()
@@ -71,12 +84,21 @@ async function checkRemoteControl(force = false) {
   }
   lastRemoteCheckAt = now;
 
-  const {cspAccessKey, cspLicenseStatus: prev} = await chrome.storage.local.get(["cspAccessKey", "cspLicenseStatus"]);
+  const {cspAccessKey, cspLicenseStatus: prev, cspKeyRegisteredAt} = await chrome.storage.local.get([
+    "cspAccessKey", "cspLicenseStatus", "cspKeyRegisteredAt"
+  ]);
   const userKey = String(cspAccessKey || "").trim().toUpperCase();
   const url = `https://raw.githubusercontent.com/${GITHUB_REPO}/${GITHUB_BRANCH}/config.json?t=${now}`;
 
   try {
-    const res = await fetch(url, {cache: "no-store"});
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10000);
+    let res;
+    try {
+      res = await fetch(url, {cache: "no-store", signal: ctrl.signal});
+    } finally {
+      clearTimeout(timer);
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const cfg = await res.json();
     const latestVersion = String(cfg?.version || localVer);
@@ -88,11 +110,15 @@ async function checkRemoteControl(force = false) {
         allowed: false,
         configured: true,
         reason: "global_disabled",
-        message: String(cfg?.globalMessage || "⏸ यह Extension अभी बंद है। कृपया Admin से संपर्क करें।"),
+        message: String(cfg?.globalMessage || "⏸ यह Extension अभी मेंटेनेंस के लिए बंद है। कृपया Admin से संपर्क करें।"),
         key: userKey,
-        name: "",
-        expires: "",
+        name: prev?.name || "",
+        expires: prev?.expires || "",
+        daysLeft: calcDaysLeft(prev?.expires || ""),
+        plan: prev?.plan || "",
+        phone: prev?.phone || "",
         notice,
+        localVersion: localVer,
         latestVersion,
         updateAvailable,
         checkedAt: now
@@ -106,11 +132,15 @@ async function checkRemoteControl(force = false) {
         allowed: false,
         configured: true,
         reason: "no_key",
-        message: "🔑 कृपया अपनी Access Key डालकर चालू करें।",
+        message: "🔑 कृपया अपनी Access Key डालकर '✓ Verify' दबाएँ।",
         key: "",
         name: "",
         expires: "",
+        daysLeft: null,
+        plan: "",
+        phone: "",
         notice,
+        localVersion: localVer,
         latestVersion,
         updateAvailable,
         checkedAt: now
@@ -128,29 +158,15 @@ async function checkRemoteControl(force = false) {
         allowed: false,
         configured: true,
         reason: "invalid_key",
-        message: "❌ गलत Access Key — कृपया सही Key डालें या Admin से संपर्क करें।",
+        message: `❌ गलत Access Key ('${userKey}')! यह Key रजिस्टर नहीं है। सही Key डालें या Admin से संपर्क करें।`,
         key: userKey,
         name: "",
         expires: "",
+        daysLeft: null,
+        plan: "",
+        phone: "",
         notice,
-        latestVersion,
-        updateAvailable,
-        checkedAt: now
-      };
-      await chrome.storage.local.set({cspLicenseStatus: status});
-      return status;
-    }
-
-    if (entry.active === false) {
-      const status = {
-        allowed: false,
-        configured: true,
-        reason: "key_disabled",
-        message: String(entry.message || "⏸ आपकी Access Key बंद कर दी गई है। कृपया Admin से संपर्क करें।"),
-        key: userKey,
-        name: String(entry.name || ""),
-        expires: String(entry.expires || ""),
-        notice,
+        localVersion: localVer,
         latestVersion,
         updateAvailable,
         checkedAt: now
@@ -160,16 +176,25 @@ async function checkRemoteControl(force = false) {
     }
 
     const expires = String(entry.expires || "").trim();
-    if (expires && /^\d{4}-\d{2}-\d{2}$/.test(expires) && getTodayIsoDate() > expires) {
+    const daysLeft = calcDaysLeft(expires);
+    const entryName = String(entry.name || userKey);
+    const entryPlan = String(entry.plan || "Standard");
+    const entryPhone = String(entry.phone || "");
+
+    if (entry.active === false) {
       const status = {
         allowed: false,
         configured: true,
-        reason: "expired",
-        message: `⏰ आपकी Access Key (${expires}) की वैधता समाप्त हो गई है। Admin से संपर्क करें।`,
+        reason: "key_disabled",
+        message: String(entry.message || `⏸ आपकी Access Key ('${userKey}') Admin द्वारा बंद कर दी गई है। चालू कराने के लिए Admin से संपर्क करें।`),
         key: userKey,
-        name: String(entry.name || ""),
+        name: entryName,
         expires,
+        daysLeft,
+        plan: entryPlan,
+        phone: entryPhone,
         notice,
+        localVersion: localVer,
         latestVersion,
         updateAvailable,
         checkedAt: now
@@ -178,26 +203,54 @@ async function checkRemoteControl(force = false) {
       return status;
     }
 
+    if (expires && /^\d{4}-\d{2}-\d{2}$/.test(expires) && getTodayIsoDate() > expires) {
+      const status = {
+        allowed: false,
+        configured: true,
+        reason: "expired",
+        message: `⏰ आपकी Access Key ('${userKey}') की वैधता ${expires} को समाप्त हो गई है। रिन्यू कराने के लिए Admin से संपर्क करें।`,
+        key: userKey,
+        name: entryName,
+        expires,
+        daysLeft: 0,
+        plan: entryPlan,
+        phone: entryPhone,
+        notice,
+        localVersion: localVer,
+        latestVersion,
+        updateAvailable,
+        checkedAt: now
+      };
+      await chrome.storage.local.set({cspLicenseStatus: status});
+      return status;
+    }
+
+    const regAt = (prev?.key === userKey && cspKeyRegisteredAt) ? cspKeyRegisteredAt : now;
     const status = {
       allowed: true,
       configured: true,
       reason: "active",
-      message: "",
+      message: `✅ रजिस्ट्रेशन सफल! नाम: ${entryName} · Key: ${userKey}${expires ? ` · वैधता: ${expires}` : ""}`,
       key: userKey,
-      name: String(entry.name || ""),
+      name: entryName,
       expires,
+      daysLeft,
+      plan: entryPlan,
+      phone: entryPhone,
       notice,
+      localVersion: localVer,
       latestVersion,
       updateAvailable,
+      registeredAt: regAt,
       checkedAt: now,
       lastVerifiedAt: now
     };
-    await chrome.storage.local.set({cspLicenseStatus: status});
+    await chrome.storage.local.set({cspLicenseStatus: status, cspKeyRegisteredAt: regAt});
     return status;
   } catch (err) {
     // Temporary offline grace ONLY if previously verified active within OFFLINE_GRACE_MS
-    if (prev && prev.allowed && prev.lastVerifiedAt && (now - prev.lastVerifiedAt < OFFLINE_GRACE_MS)) {
-      const graceStatus = {...prev, offlineGrace: true, checkedAt: now};
+    if (prev && prev.allowed && prev.key === userKey && prev.lastVerifiedAt && (now - prev.lastVerifiedAt < OFFLINE_GRACE_MS)) {
+      const graceStatus = {...prev, offlineGrace: true, localVersion: localVer, checkedAt: now};
       await chrome.storage.local.set({cspLicenseStatus: graceStatus});
       return graceStatus;
     }
@@ -205,11 +258,15 @@ async function checkRemoteControl(force = false) {
       allowed: false,
       configured: true,
       reason: "network_error",
-      message: "🌐 सर्वर से Access Key वेरिफाई नहीं हो पाई — इंटरनेट जाँचकर 'Verify' दबाएँ।",
+      message: "🌐 सर्वर से संपर्क नहीं हो पाया (इंटरनेट जाँचें) — कृपया दोबारा '✓ Verify' दबाएँ।",
       key: userKey,
       name: prev?.name || "",
       expires: prev?.expires || "",
+      daysLeft: calcDaysLeft(prev?.expires || ""),
+      plan: prev?.plan || "",
+      phone: prev?.phone || "",
       notice: "",
+      localVersion: localVer,
       latestVersion: localVer,
       updateAvailable: false,
       checkedAt: now
@@ -678,6 +735,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const handled = [
     "CSP_SESSION_SAVE", "CSP_SESSION_GET", "CSP_SESSION_CLEAR",
     "CSP_LOG_PUSH", "CSP_LOG_EXPORT_NOW", "CSP_LOG_CLEAR",
+    "CSP_LICENSE_GET", "CSP_LICENSE_SET_KEY", "CSP_LICENSE_CHECK_NOW", "CSP_LICENSE_CLEAR_KEY",
     "CSP_FILL_AADHAAR_MAIN"
   ];
   if (!handled.includes(msg?.type)) return false;
@@ -715,6 +773,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const status = await checkRemoteControl(true);
       sendResponse({ok: true, status});
     } else if (msg.type === "CSP_LICENSE_CHECK_NOW") {
+      const status = await checkRemoteControl(true);
+      sendResponse({ok: true, status});
+    } else if (msg.type === "CSP_LICENSE_CLEAR_KEY") {
+      await chrome.storage.local.remove(["cspAccessKey", "cspKeyRegisteredAt"]);
       const status = await checkRemoteControl(true);
       sendResponse({ok: true, status});
     } else if (msg.type === "CSP_FILL_AADHAAR_MAIN") {

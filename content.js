@@ -1898,6 +1898,67 @@
     hooksAttached = false;
   }
 
+  function formatDaysLeftLabel(expires, daysLeft) {
+    if (!expires) return "असीमित (Unlimited)";
+    if (typeof daysLeft === "number") {
+      if (daysLeft < 0 || (daysLeft === 0 && licenseState?.reason === "expired")) return `${expires} (समाप्त ❌)`;
+      if (daysLeft === 0) return `${expires} (आज अंतिम दिन ⚠)`;
+      if (daysLeft > 3650) return `${expires} (Lifetime ✓)`;
+      return `${expires} (${daysLeft} दिन बाकी)`;
+    }
+    return expires;
+  }
+
+  function renderLicenseCard(cardEl) {
+    if (!cardEl) return;
+    cardEl.replaceChildren();
+    const st = licenseState || {};
+    cardEl.classList.toggle("is-active", !!licenseAllowed && !!st.configured);
+    cardEl.classList.toggle("is-locked", !licenseAllowed);
+
+    const statusLabels = {
+      local: "🖥 Local Mode",
+      active: st.offlineGrace ? "✅ Active (Offline Grace)" : "✅ Active (चालू)",
+      no_key: "🔑 Access Key नहीं डाली",
+      invalid_key: "❌ गलत Access Key",
+      key_disabled: "⏸ Admin द्वारा बंद",
+      expired: "⏰ लाइसेंस समाप्त (Expired)",
+      global_disabled: "⏸ मेंटेनेंस (बंद)",
+      network_error: "🌐 सर्वर / इंटरनेट एरर"
+    };
+    const verStr = st.localVersion
+      ? (st.updateAvailable && st.latestVersion ? `v${st.localVersion} → 🔔 v${st.latestVersion}` : `v${st.localVersion} (✓ लेटेस्ट)`)
+      : `v${chrome.runtime.getManifest().version}`;
+    const rows = [
+      ["स्टेटस", statusLabels[st.reason] || (licenseAllowed ? "✅ चालू" : "🔒 बंद")],
+      ["यूज़र का नाम", st.name || (st.configured ? "रजिस्टर नहीं" : "Local User")],
+      ["Access Key", st.key || "नहीं डाली"],
+      ["प्लान", st.plan || (st.configured ? "Standard" : "Local")],
+      ["वैधता (Expiry)", st.configured ? formatDaysLeftLabel(st.expires, st.daysLeft) : "असीमित"],
+      ["वर्ज़न", verStr]
+    ];
+    if (st.phone) rows.splice(2, 0, ["मोबाइल / ID", st.phone]);
+    if (st.checkedAt) {
+      const t = new Date(st.checkedAt);
+      const pad = n => String(n).padStart(2, "0");
+      rows.push(["आखिरी जाँच", `${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`]);
+    }
+    rows.forEach(([k, v]) => {
+      const r = document.createElement("div");
+      r.className = "csp-lic-row";
+      const s = document.createElement("span"); s.textContent = k;
+      const b = document.createElement("strong"); b.textContent = v; b.title = v;
+      r.append(s, b);
+      cardEl.append(r);
+    });
+    if (st.message) {
+      const m = document.createElement("div");
+      m.className = "csp-lic-msg" + (licenseAllowed ? " ok" : "");
+      m.textContent = st.message;
+      cardEl.append(m);
+    }
+  }
+
   function applyLicenseState(panel = document.getElementById("csp-helper-panel")) {
     licenseAllowed = licenseState?.allowed !== false;
     if (!licenseAllowed) {
@@ -1915,33 +1976,47 @@
       panel.classList.toggle("csp-locked-mode", !licenseAllowed);
       const lockMsg = panel.querySelector("#csp-lock-msg");
       if (lockMsg) {
-        lockMsg.textContent = licenseState?.message || "🔒 यह Extension अभी लॉक है। कृपया अपनी Access Key डालें।";
+        lockMsg.textContent = licenseState?.message || "🔑 कृपया अपनी Access Key डालकर '✓ Verify' दबाएँ।";
+        lockMsg.title = lockMsg.textContent;
       }
       const lockInput = panel.querySelector("#csp-lock-key");
       if (lockInput && !lockInput.value && licenseState?.key) {
         lockInput.value = licenseState.key;
       }
+      const badgeEl = panel.querySelector("#csp-helper-user-badge");
+      if (badgeEl) {
+        if (licenseAllowed && licenseState?.configured && licenseState?.key) {
+          const expShort = licenseState.expires
+            ? (typeof licenseState.daysLeft === "number" && licenseState.daysLeft <= 3650 ? ` · ${licenseState.expires} (${licenseState.daysLeft}d)` : ` · ${licenseState.expires}`)
+            : "";
+          badgeEl.textContent = `👤 ${licenseState.name || licenseState.key} (${licenseState.key})${expShort}`;
+          badgeEl.classList.add("show");
+        } else {
+          badgeEl.classList.remove("show");
+        }
+      }
       const noticeEl = panel.querySelector("#csp-helper-notice");
       if (noticeEl) {
         const parts = [];
+        let isWarn = false;
         if (licenseState?.updateAvailable && licenseState?.latestVersion) {
-          parts.push(`🔔 नया अपडेट v${licenseState.latestVersion} उपलब्ध (Update.bat चलाएँ)`);
+          parts.push(`🔔 नया अपडेट v${licenseState.latestVersion} उपलब्ध`);
+        }
+        if (licenseAllowed && typeof licenseState?.daysLeft === "number" && licenseState.daysLeft >= 0 && licenseState.daysLeft <= 7) {
+          parts.push(`⚠ लाइसेंस ${licenseState.daysLeft === 0 ? "आज" : `${licenseState.daysLeft} दिन में`} समाप्त होगा (${licenseState.expires})`);
+          isWarn = true;
         }
         if (licenseState?.notice) parts.push(licenseState.notice);
         const msg = parts.join(" · ");
         noticeEl.textContent = msg;
+        noticeEl.classList.toggle("warn", isWarn);
         noticeEl.classList.toggle("show", !!msg && licenseAllowed);
       }
     }
-    const setInfo = document.getElementById("csp-set-key-info");
-    if (setInfo) {
-      if (!licenseState?.configured) {
-        setInfo.textContent = "मोड: Local Mode (GitHub रिमोट कंट्रोल अभी सेट नहीं)";
-      } else if (licenseAllowed) {
-        setInfo.textContent = `✓ चालू · Key: ${licenseState.key || "-"}${licenseState.expires ? ` · वैधता: ${licenseState.expires}` : ""}${licenseState.updateAvailable ? ` · 🔔 v${licenseState.latestVersion} उपलब्ध` : ""}`;
-      } else {
-        setInfo.textContent = licenseState?.message || "🔒 बंद / लॉक";
-      }
+    renderLicenseCard(document.getElementById("csp-set-lic-card"));
+    const setKeyIn = document.getElementById("csp-set-key-input");
+    if (setKeyIn && document.activeElement !== setKeyIn && licenseState?.key) {
+      setKeyIn.value = licenseState.key;
     }
   }
 
@@ -2073,13 +2148,16 @@
       </div>
       <div class="csp-set-sep"></div>
       <div class="csp-set-row">
-        <label>🔑 Access Key / अपडेट स्टेटस</label>
+        <label>🪪 यूज़र और लाइसेंस जानकारी (License)</label>
+        <div id="csp-set-lic-card" class="csp-lic-card"></div>
         <div class="csp-set-key-row">
-          <input type="text" id="csp-set-key-input" placeholder="Access Key (जैसे DOST1)" value="${licenseState?.key || ""}">
-          <button type="button" id="csp-set-key-save" class="csp-helper-btn">✓ सेव</button>
-          <button type="button" id="csp-set-key-check" class="csp-helper-btn" title="स्टेटस और अपडेट चेक करें">🔄</button>
+          <input type="text" id="csp-set-key-input" placeholder="Access Key डालें (जैसे DOST1)" value="${licenseState?.key || ""}">
+          <button type="button" id="csp-set-key-save" class="csp-helper-btn">✓ Verify</button>
         </div>
-        <div id="csp-set-key-info" class="csp-set-key-info"></div>
+        <div class="csp-set-key-actions">
+          <button type="button" id="csp-set-key-check" class="csp-helper-btn">🔄 स्टेटस चेक</button>
+          <button type="button" id="csp-set-key-logout" class="csp-helper-btn danger-btn">🚪 Key हटाएँ</button>
+        </div>
       </div>
       <button type="button" id="csp-set-reset" class="csp-set-reset">डिफ़ॉल्ट सेटिंग्स रीसेट करें</button>
     `;
@@ -2159,19 +2237,48 @@
 
     // Access Key & Remote Status controls
     const keyInput = box.querySelector("#csp-set-key-input");
-    const runKeyVerify = async (saveNew) => {
-      const infoEl = box.querySelector("#csp-set-key-info");
-      if (infoEl) infoEl.textContent = "⏳ जाँच रहे हैं…";
-      const res = saveNew
-        ? await send("CSP_LICENSE_SET_KEY", {key: keyInput?.value || ""})
-        : await send("CSP_LICENSE_CHECK_NOW");
-      if (res?.status) {
-        licenseState = {...licenseState, ...res.status};
-        applyLicenseState(panel);
+    const saveKeyBtn = box.querySelector("#csp-set-key-save");
+    const checkKeyBtn = box.querySelector("#csp-set-key-check");
+    const logoutKeyBtn = box.querySelector("#csp-set-key-logout");
+    const runKeyAction = async (mode) => {
+      const cardEl = box.querySelector("#csp-set-lic-card");
+      if (mode === "save" && !(keyInput?.value || "").trim()) {
+        licenseState = {...licenseState, message: "🔑 कृपया पहले अपनी Access Key लिखें।"};
+        renderLicenseCard(cardEl);
+        return;
+      }
+      if (saveKeyBtn) saveKeyBtn.disabled = true;
+      if (checkKeyBtn) checkKeyBtn.disabled = true;
+      if (logoutKeyBtn) logoutKeyBtn.disabled = true;
+      try {
+        let res;
+        if (mode === "save") res = await send("CSP_LICENSE_SET_KEY", {key: keyInput?.value || ""});
+        else if (mode === "logout") res = await send("CSP_LICENSE_CLEAR_KEY");
+        else res = await send("CSP_LICENSE_CHECK_NOW");
+        if (res?.ok && res?.status) {
+          licenseState = {...licenseState, ...res.status};
+          applyLicenseState(panel);
+          if (licenseAllowed) {
+            refreshMemory();
+            showStatus(licenseState.message || `✅ रजिस्ट्रेशन सफल! (${licenseState.name || licenseState.key})`);
+          }
+        } else {
+          licenseState = {...licenseState, message: "⚠ Extension से संपर्क नहीं हो पाया — कृपया पेज रिफ्रेश या chrome://extensions में Reload (↻) करें।"};
+          renderLicenseCard(cardEl);
+        }
+      } finally {
+        if (saveKeyBtn) saveKeyBtn.disabled = false;
+        if (checkKeyBtn) checkKeyBtn.disabled = false;
+        if (logoutKeyBtn) logoutKeyBtn.disabled = false;
       }
     };
-    box.querySelector("#csp-set-key-save").addEventListener("click", () => runKeyVerify(true));
-    box.querySelector("#csp-set-key-check").addEventListener("click", () => runKeyVerify(false));
+    saveKeyBtn?.addEventListener("click", () => runKeyAction("save"));
+    keyInput?.addEventListener("keydown", e => { if (e.key === "Enter") runKeyAction("save"); });
+    checkKeyBtn?.addEventListener("click", () => runKeyAction("check"));
+    logoutKeyBtn?.addEventListener("click", () => {
+      if (keyInput) keyInput.value = "";
+      runKeyAction("logout");
+    });
     applyLicenseState(panel);
 
     // Reset button
@@ -2222,9 +2329,10 @@
           <button id="csp-helper-close" type="button" title="बंद करें">×</button>
         </div>
       </div>
+      <div id="csp-helper-user-badge"></div>
       <div id="csp-helper-notice"></div>
       <div id="csp-helper-lockbox">
-        <div id="csp-lock-msg" class="csp-lock-msg">🔑 कृपया अपनी Access Key डालकर चालू करें।</div>
+        <div id="csp-lock-msg" class="csp-lock-msg">🔑 कृपया अपनी Access Key डालकर '✓ Verify' दबाएँ।</div>
         <div class="csp-lock-form">
           <input type="text" id="csp-lock-key" placeholder="Access Key (जैसे DOST1)">
           <button type="button" id="csp-lock-verify">✓ Verify</button>
@@ -2278,14 +2386,33 @@
     const lockBtn = panel.querySelector("#csp-lock-verify");
     const verifyLockKey = async () => {
       const msgEl = panel.querySelector("#csp-lock-msg");
-      if (msgEl) msgEl.textContent = "⏳ Access Key वेरिफाई कर रहे हैं…";
-      const res = await send("CSP_LICENSE_SET_KEY", {key: lockInput?.value || ""});
-      if (res?.status) {
-        licenseState = {...licenseState, ...res.status};
-        applyLicenseState(panel);
-        if (licenseAllowed) {
-          refreshMemory();
-          showStatus(`✓ Access Key (${licenseState.key}) वेरिफाई हो गई!`);
+      const rawKey = (lockInput?.value || "").trim().toUpperCase();
+      if (!rawKey) {
+        if (msgEl) msgEl.textContent = "🔑 कृपया पहले अपनी Access Key लिखें (जैसे DOST1)।";
+        lockInput?.focus();
+        return;
+      }
+      if (lockBtn) {
+        lockBtn.disabled = true;
+        lockBtn.textContent = "⏳ जाँच…";
+      }
+      if (msgEl) msgEl.textContent = `⏳ Access Key ('${rawKey}') वेरिफाई कर रहे हैं…`;
+      try {
+        const res = await send("CSP_LICENSE_SET_KEY", {key: rawKey});
+        if (res?.ok && res?.status) {
+          licenseState = {...licenseState, ...res.status};
+          applyLicenseState(panel);
+          if (licenseAllowed) {
+            refreshMemory();
+            showStatus(licenseState.message || `✅ रजिस्ट्रेशन सफल! नाम: ${licenseState.name || licenseState.key} · वैधता: ${licenseState.expires || "Unlimited"}`);
+          }
+        } else if (msgEl) {
+          msgEl.textContent = "⚠ Extension से संपर्क नहीं हो पाया — कृपया पेज रिफ्रेश या chrome://extensions में 1 बार Reload (↻) करें।";
+        }
+      } finally {
+        if (lockBtn) {
+          lockBtn.disabled = false;
+          lockBtn.textContent = "✓ Verify";
         }
       }
     };

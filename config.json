@@ -1,5 +1,5 @@
 {
-  "version": "0.2.6",
+  "version": "0.2.7",
   "globalEnabled": true,
   "globalMessage": "⏸ यह Extension अभी मेंटेनेंस के लिए बंद है। कृपया Admin से संपर्क करें।",
   "notice": "",
@@ -7,17 +7,20 @@
     "ADMIN": {
       "active": true,
       "expires": "2099-12-31",
-      "name": "Owner (Admin)"
+      "name": "Sanjay Nag (Owner)",
+      "plan": "Admin Lifetime"
     },
     "DOST1": {
       "active": true,
       "expires": "2026-12-31",
-      "name": "Friend 1"
+      "name": "Friend 1",
+      "plan": "Standard"
     },
     "DOST2": {
       "active": false,
       "expires": "2026-12-31",
-      "name": "Friend 2 (Paused Example)"
+      "name": "Friend 2",
+      "plan": "Paused"
     }
   }
 }
