@@ -59,7 +59,26 @@ async function hashAccessKey(rawKey) {
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function checkRemoteControl(force = false) {
+function normalizeCscId(rawId) {
+  const d = String(rawId || "").replace(/\D/g, "");
+  if (d.length === 14 && d.startsWith("01")) return d.slice(2);
+  if (d.length === 12) return d;
+  return "";
+}
+
+async function hashCscId(rawId) {
+  const id12 = normalizeCscId(rawId);
+  if (id12.length !== 12) return "";
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("CSP-CSCID-V1:" + id12));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function maskCscId(id12) {
+  const d = normalizeCscId(id12);
+  return d.length === 12 ? `${d.slice(0, 4)}****${d.slice(-4)}` : "";
+}
+
+async function checkRemoteControl(force = false, incomingCscId = "") {
   const localVer = chrome.runtime.getManifest().version;
   if (!isRemoteControlConfigured()) {
     const status = {
@@ -90,10 +109,11 @@ async function checkRemoteControl(force = false) {
   }
   lastRemoteCheckAt = now;
 
-  const {cspAccessKey, cspLicenseStatus: prev, cspKeyRegisteredAt} = await chrome.storage.local.get([
-    "cspAccessKey", "cspLicenseStatus", "cspKeyRegisteredAt"
+  const {cspAccessKey, cspLicenseStatus: prev, cspKeyRegisteredAt, cspDetectedCscId, cspLocalLockedCscMap} = await chrome.storage.local.get([
+    "cspAccessKey", "cspLicenseStatus", "cspKeyRegisteredAt", "cspDetectedCscId", "cspLocalLockedCscMap"
   ]);
   const userKey = String(cspAccessKey || "").trim().toUpperCase();
+  const currentCscId = normalizeCscId(incomingCscId || cspDetectedCscId);
   const url = `https://raw.githubusercontent.com/${GITHUB_REPO}/${GITHUB_BRANCH}/config.json?t=${now}`;
 
   try {
@@ -236,6 +256,94 @@ async function checkRemoteControl(force = false) {
       return status;
     }
 
+    // CSC ID Lock check (Global GitHub cscIdHash OR local auto-lock on same PC)
+    const expectedCscHash = String(entry.cscIdHash || "").trim().toLowerCase();
+    const autoLockLocal = entry.autoLockLocalCsc === true;
+    const localLockMap = (cspLocalLockedCscMap && typeof cspLocalLockedCscMap === "object") ? {...cspLocalLockedCscMap} : {};
+    let cscLockLabel = "🔓 Admin / सभी CSC ID";
+
+    if (expectedCscHash) {
+      if (!currentCscId) {
+        const status = {
+          allowed: false,
+          configured: true,
+          reason: "csc_waiting",
+          message: "🔑 कृपया पहले DigiPay में लॉगिन करें — आपकी CSC ID अपने आप वेरिफाई होगी।",
+          key: userKey,
+          name: entryName,
+          expires,
+          daysLeft,
+          plan: entryPlan,
+          phone: entryPhone,
+          cscLockLabel: "🔒 CSC ID वेरिफाई बाकी",
+          notice,
+          localVersion: localVer,
+          latestVersion,
+          updateAvailable,
+          checkedAt: now
+        };
+        await chrome.storage.local.set({cspLicenseStatus: status});
+        return status;
+      }
+      const curHash = await hashCscId(currentCscId);
+      if (curHash !== expectedCscHash) {
+        const status = {
+          allowed: false,
+          configured: true,
+          reason: "csc_mismatch",
+          message: `🔒 यह Access Key किसी दूसरी CSC ID के लिए लॉक है! आप इसे अपनी CSC ID (${maskCscId(currentCscId)}) पर नहीं चला सकते।`,
+          key: userKey,
+          name: entryName,
+          expires,
+          daysLeft,
+          plan: entryPlan,
+          phone: entryPhone,
+          cscLockLabel: "❌ CSC ID मैच नहीं",
+          notice,
+          localVersion: localVer,
+          latestVersion,
+          updateAvailable,
+          checkedAt: now
+        };
+        await chrome.storage.local.set({cspLicenseStatus: status});
+        return status;
+      }
+      cscLockLabel = `🔒 ${maskCscId(currentCscId)} (Verified)`;
+    } else if (autoLockLocal) {
+      if (currentCscId) {
+        const curHash = await hashCscId(currentCscId);
+        const savedLocalHash = localLockMap[keyHash];
+        if (!savedLocalHash) {
+          localLockMap[keyHash] = curHash;
+          await chrome.storage.local.set({cspLocalLockedCscMap: localLockMap});
+        } else if (savedLocalHash !== curHash) {
+          const status = {
+            allowed: false,
+            configured: true,
+            reason: "csc_mismatch",
+            message: `🔒 यह Access Key इस PC पर पहले से किसी दूसरी CSC ID पर लॉक है! (आपकी CSC ID: ${maskCscId(currentCscId)})`,
+            key: userKey,
+            name: entryName,
+            expires,
+            daysLeft,
+            plan: entryPlan,
+            phone: entryPhone,
+            cscLockLabel: "❌ CSC ID मैच नहीं",
+            notice,
+            localVersion: localVer,
+            latestVersion,
+            updateAvailable,
+            checkedAt: now
+          };
+          await chrome.storage.local.set({cspLicenseStatus: status});
+          return status;
+        }
+        cscLockLabel = `🔒 ${maskCscId(currentCscId)} (Auto-Locked)`;
+      } else {
+        cscLockLabel = "⏳ लॉगिन पर ऑटो-लॉक होगा";
+      }
+    }
+
     const regAt = (prev?.key === userKey && cspKeyRegisteredAt) ? cspKeyRegisteredAt : now;
     const status = {
       allowed: true,
@@ -248,6 +356,8 @@ async function checkRemoteControl(force = false) {
       daysLeft,
       plan: entryPlan,
       phone: entryPhone,
+      cscLockLabel,
+      detectedCscId: currentCscId ? maskCscId(currentCscId) : "",
       notice,
       localVersion: localVer,
       latestVersion,
@@ -746,7 +856,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const handled = [
     "CSP_SESSION_SAVE", "CSP_SESSION_GET", "CSP_SESSION_CLEAR",
     "CSP_LOG_PUSH", "CSP_LOG_EXPORT_NOW", "CSP_LOG_CLEAR",
-    "CSP_LICENSE_GET", "CSP_LICENSE_SET_KEY", "CSP_LICENSE_CHECK_NOW", "CSP_LICENSE_CLEAR_KEY",
+    "CSP_LICENSE_GET", "CSP_LICENSE_SET_KEY", "CSP_LICENSE_CHECK_NOW", "CSP_LICENSE_CLEAR_KEY", "CSP_LICENSE_SET_CSCID",
     "CSP_FILL_AADHAAR_MAIN"
   ];
   if (!handled.includes(msg?.type)) return false;
@@ -775,16 +885,32 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       await chrome.storage.local.remove("cspDebugLogs");
       sendResponse({ok: true});
     } else if (msg.type === "CSP_LICENSE_GET") {
+      const csc = normalizeCscId(msg.data?.cscId);
+      if (csc) await chrome.storage.local.set({cspDetectedCscId: csc});
       const {cspLicenseStatus} = await chrome.storage.local.get("cspLicenseStatus");
-      const status = cspLicenseStatus || await checkRemoteControl(false);
+      const status = cspLicenseStatus || await checkRemoteControl(false, csc);
       sendResponse({ok: true, status});
+    } else if (msg.type === "CSP_LICENSE_SET_CSCID") {
+      const csc = normalizeCscId(msg.data?.cscId);
+      if (!csc) return sendResponse({ok: true, changed: false});
+      const {cspDetectedCscId, cspLicenseStatus} = await chrome.storage.local.get(["cspDetectedCscId", "cspLicenseStatus"]);
+      const changed = csc !== cspDetectedCscId;
+      await chrome.storage.local.set({cspDetectedCscId: csc});
+      if (changed || cspLicenseStatus?.reason === "csc_waiting" || cspLicenseStatus?.reason === "csc_mismatch" || !cspLicenseStatus?.detectedCscId) {
+        const status = await checkRemoteControl(true, csc);
+        return sendResponse({ok: true, changed: true, status});
+      }
+      sendResponse({ok: true, changed: false, status: cspLicenseStatus});
     } else if (msg.type === "CSP_LICENSE_SET_KEY") {
       const key = String(msg.data?.key || "").trim().toUpperCase();
-      await chrome.storage.local.set({cspAccessKey: key});
-      const status = await checkRemoteControl(true);
+      const csc = normalizeCscId(msg.data?.cscId);
+      await chrome.storage.local.set({cspAccessKey: key, ...(csc ? {cspDetectedCscId: csc} : {})});
+      const status = await checkRemoteControl(true, csc);
       sendResponse({ok: true, status});
     } else if (msg.type === "CSP_LICENSE_CHECK_NOW") {
-      const status = await checkRemoteControl(true);
+      const csc = normalizeCscId(msg.data?.cscId);
+      if (csc) await chrome.storage.local.set({cspDetectedCscId: csc});
+      const status = await checkRemoteControl(true, csc);
       sendResponse({ok: true, status});
     } else if (msg.type === "CSP_LICENSE_CLEAR_KEY") {
       await chrome.storage.local.remove(["cspAccessKey", "cspKeyRegisteredAt"]);

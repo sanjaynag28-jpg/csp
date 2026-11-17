@@ -1898,6 +1898,57 @@
     hooksAttached = false;
   }
 
+  let lastDetectedCscId = "";
+  let cscPollTimer = null;
+
+  function detectPageCscId() {
+    if (isLoginPage()) return "";
+    // Scan ONLY top header/navbar elements (never form inputs / customer Aadhaar!)
+    const els = [...document.querySelectorAll('header *,nav *,.navbar *,.topbar *,[class*="header" i] *,[class*="profile" i] *,span,div,button,a,p,strong,b')]
+      .filter(el => visible(el) && !inPanel(el) && !el.matches?.("input,textarea,select"))
+      .filter(el => {
+        if (el.children.length > 4) return false;
+        const r = el.getBoundingClientRect();
+        return r.top >= -5 && r.top <= 115 && r.height > 8 && r.height <= 90 && r.left >= 180;
+      });
+
+    for (const el of els) {
+      const txt = (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+      if (!txt || txt.length > 90 || /₹|\bW1\b|\bW2\b|\.\d{2}\b/i.test(txt)) continue;
+      // 1. DigiPay Web header: "Sanjay Nag (411632300012)"
+      const paren12 = txt.match(/\((\d{12})\)/);
+      if (paren12) return paren12[1];
+      // 2. DigiPay Lite header: "01411632300012" (01 + 12-digit CSC ID)
+      const lite14 = txt.match(/\b01(\d{12})\b/);
+      if (lite14) return lite14[1];
+      // 3. Standalone 12-digit CSC ID in top-right profile bar
+      const plain12 = txt.match(/\b(\d{12})\b/);
+      if (plain12) return plain12[1];
+    }
+    return "";
+  }
+
+  async function syncDetectedCscId() {
+    const id = detectPageCscId();
+    if (!id) return "";
+    const changed = id !== lastDetectedCscId;
+    lastDetectedCscId = id;
+    const lockCsc = document.getElementById("csp-lock-csc-row");
+    const lockCscVal = document.getElementById("csp-lock-csc-val");
+    if (lockCsc && lockCscVal) {
+      lockCscVal.textContent = id;
+      lockCsc.classList.add("show");
+    }
+    if (changed || licenseState?.reason === "csc_waiting" || licenseState?.reason === "csc_mismatch") {
+      const res = await send("CSP_LICENSE_SET_CSCID", {cscId: id});
+      if (res?.status) {
+        licenseState = {...licenseState, ...res.status};
+        applyLicenseState();
+      }
+    }
+    return id;
+  }
+
   function formatDaysLeftLabel(expires, daysLeft) {
     if (!expires) return "असीमित (Unlimited)";
     if (typeof daysLeft === "number") {
@@ -1923,6 +1974,8 @@
       invalid_key: "❌ गलत Access Key",
       key_disabled: "⏸ Admin द्वारा बंद",
       expired: "⏰ लाइसेंस समाप्त (Expired)",
+      csc_waiting: "🔑 DigiPay लॉगिन बाकी",
+      csc_mismatch: "🔒 दूसरी CSC ID पर लॉक",
       global_disabled: "⏸ मेंटेनेंस (बंद)",
       network_error: "🌐 सर्वर / इंटरनेट एरर"
     };
@@ -1933,6 +1986,7 @@
       ["स्टेटस", statusLabels[st.reason] || (licenseAllowed ? "✅ चालू" : "🔒 बंद")],
       ["यूज़र का नाम", st.name || (st.configured ? "रजिस्टर नहीं" : "Local User")],
       ["Access Key", st.key || "नहीं डाली"],
+      ["CSC ID लॉक", st.cscLockLabel || (lastDetectedCscId ? `🆔 ${lastDetectedCscId}` : "जाँच रहे हैं…")],
       ["प्लान", st.plan || (st.configured ? "Standard" : "Local")],
       ["वैधता (Expiry)", st.configured ? formatDaysLeftLabel(st.expires, st.daysLeft) : "असीमित"],
       ["वर्ज़न", verStr]
@@ -2251,10 +2305,11 @@
       if (checkKeyBtn) checkKeyBtn.disabled = true;
       if (logoutKeyBtn) logoutKeyBtn.disabled = true;
       try {
+        const curCsc = detectPageCscId() || lastDetectedCscId;
         let res;
-        if (mode === "save") res = await send("CSP_LICENSE_SET_KEY", {key: keyInput?.value || ""});
+        if (mode === "save") res = await send("CSP_LICENSE_SET_KEY", {key: keyInput?.value || "", cscId: curCsc});
         else if (mode === "logout") res = await send("CSP_LICENSE_CLEAR_KEY");
-        else res = await send("CSP_LICENSE_CHECK_NOW");
+        else res = await send("CSP_LICENSE_CHECK_NOW", {cscId: curCsc});
         if (res?.ok && res?.status) {
           licenseState = {...licenseState, ...res.status};
           applyLicenseState(panel);
@@ -2333,8 +2388,12 @@
       <div id="csp-helper-notice"></div>
       <div id="csp-helper-lockbox">
         <div id="csp-lock-msg" class="csp-lock-msg">🔑 कृपया अपनी Access Key डालकर '✓ Verify' दबाएँ।</div>
+        <div id="csp-lock-csc-row" class="csp-lock-csc-row">
+          <span>🆔 CSC ID: <strong id="csp-lock-csc-val"></strong></span>
+          <button type="button" id="csp-lock-csc-copy" class="csp-lock-copy-btn">📋 कॉपी</button>
+        </div>
         <div class="csp-lock-form">
-          <input type="text" id="csp-lock-key" placeholder="Access Key (जैसे DOST1)">
+          <input type="text" id="csp-lock-key" placeholder="Access Key (जैसे CSP-DOST1-7429)">
           <button type="button" id="csp-lock-verify">✓ Verify</button>
         </div>
       </div>
@@ -2398,7 +2457,8 @@
       }
       if (msgEl) msgEl.textContent = `⏳ Access Key ('${rawKey}') वेरिफाई कर रहे हैं…`;
       try {
-        const res = await send("CSP_LICENSE_SET_KEY", {key: rawKey});
+        const curCsc = detectPageCscId() || lastDetectedCscId;
+        const res = await send("CSP_LICENSE_SET_KEY", {key: rawKey, cscId: curCsc});
         if (res?.ok && res?.status) {
           licenseState = {...licenseState, ...res.status};
           applyLicenseState(panel);
@@ -2418,6 +2478,14 @@
     };
     lockBtn?.addEventListener("click", verifyLockKey);
     lockInput?.addEventListener("keydown", e => { if (e.key === "Enter") verifyLockKey(); });
+    const cscCopyBtn = panel.querySelector("#csp-lock-csc-copy");
+    cscCopyBtn?.addEventListener("click", async () => {
+      const id = detectPageCscId() || lastDetectedCscId;
+      if (!id) return;
+      try { await navigator.clipboard.writeText(id); } catch (_) {}
+      cscCopyBtn.textContent = "✓ कॉपी हुआ";
+      setTimeout(() => { cscCopyBtn.textContent = "📋 कॉपी"; }, 2000);
+    });
     applyPanelMode(panel);
     applyLicenseState(panel);
     refreshMemory();
@@ -2523,6 +2591,8 @@
 
   window.__cspHelperCleanup = () => {
     flushLogs();
+    clearInterval(cscPollTimer);
+    cscPollTimer = null;
     detachPageHooks();
     detachRememberHooks();
     window.removeEventListener("error", onWinError);
@@ -2534,7 +2604,9 @@
   };
 
   loadPrefs().then(async () => {
-    const licRes = await send("CSP_LICENSE_GET");
+    const initialCsc = detectPageCscId();
+    if (initialCsc) lastDetectedCscId = initialCsc;
+    const licRes = await send("CSP_LICENSE_GET", {cscId: initialCsc});
     if (licRes?.status) {
       licenseState = {...licenseState, ...licRes.status};
       licenseAllowed = licenseState.allowed !== false;
@@ -2559,6 +2631,9 @@
       }
     }
     applyLicenseState();
+    syncDetectedCscId();
+    clearInterval(cscPollTimer);
+    cscPollTimer = setInterval(() => { syncDetectedCscId(); }, 3500);
     refreshMemory();
     if (licenseAllowed) {
       if (extensionEnabled) {
