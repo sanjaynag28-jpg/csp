@@ -53,6 +53,12 @@ function calcDaysLeft(expiresIso) {
   return Math.floor((exp.getTime() - today.getTime()) / 86400000);
 }
 
+async function hashAccessKey(rawKey) {
+  const normalized = "CSP-HELPER-V1:" + String(rawKey || "").trim().toUpperCase();
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function checkRemoteControl(force = false) {
   const localVer = chrome.runtime.getManifest().version;
   if (!isRemoteControlConfigured()) {
@@ -149,9 +155,14 @@ async function checkRemoteControl(force = false) {
       return status;
     }
 
-    const keysMap = (cfg && typeof cfg.keys === "object" && cfg.keys) ? cfg.keys : {};
-    const matchedKey = Object.keys(keysMap).find(k => k.trim().toUpperCase() === userKey);
-    const entry = matchedKey ? keysMap[matchedKey] : null;
+    const hashMap = (cfg && typeof cfg.keyHashes === "object" && cfg.keyHashes) ? cfg.keyHashes : {};
+    const keyHash = await hashAccessKey(userKey);
+    let entry = hashMap[keyHash] || null;
+    if (!entry) {
+      const keysMap = (cfg && typeof cfg.keys === "object" && cfg.keys) ? cfg.keys : {};
+      const matchedKey = Object.keys(keysMap).find(k => k.trim().toUpperCase() === userKey);
+      entry = matchedKey ? keysMap[matchedKey] : null;
+    }
 
     if (!entry) {
       const status = {

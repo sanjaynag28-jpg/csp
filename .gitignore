@@ -1,6 +1,8 @@
 csp-auto-log.txt
 .github-token
+My-Secret-Keys.txt
 *.zip
+!CSP-Automation-Latest.zip
 Publish-To-GitHub.ps1
 GitHub-Login.bat
 Update.bat
