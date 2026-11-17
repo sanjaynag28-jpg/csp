@@ -1,0 +1,23 @@
+{
+  "version": "0.2.6",
+  "globalEnabled": true,
+  "globalMessage": "⏸ यह Extension अभी मेंटेनेंस के लिए बंद है। कृपया Admin से संपर्क करें।",
+  "notice": "",
+  "keys": {
+    "ADMIN": {
+      "active": true,
+      "expires": "2099-12-31",
+      "name": "Owner (Admin)"
+    },
+    "DOST1": {
+      "active": true,
+      "expires": "2026-12-31",
+      "name": "Friend 1"
+    },
+    "DOST2": {
+      "active": false,
+      "expires": "2026-12-31",
+      "name": "Friend 2 (Paused Example)"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "manifest_version": 3,
+  "name": "CSP Automation Helper",
+  "version": "0.2.6",
+  "description": "Automatic customer session saving with explicit save confirmation and Other-bank dropdown memory.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "alarms",
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://digipayweb.csccloud.in/*",
+    "https://digipaylite.in/*",
+    "https://raw.githubusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://digipayweb.csccloud.in/*",
+        "https://digipaylite.in/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "balance-enquiry": {
+      "suggested_key": {
+        "default": "Alt+1"
+      },
+      "description": "Open/select Balance Enquiry"
+    },
+    "cash-withdrawal": {
+      "suggested_key": {
+        "default": "Alt+2"
+      },
+      "description": "Open/select Cash Withdrawal"
+    },
+    "toggle-panel": {
+      "suggested_key": {
+        "default": "Alt+Shift+P"
+      },
+      "description": "Open/close CSP Automation panel"
+    }
+  },
+  "action": {
+    "default_title": "Open CSP Automation panel"
+  }
+}
