@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CSP Automation Helper",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "Automatic customer session saving with explicit save confirmation and Other-bank dropdown memory.",
   "permissions": [
     "activeTab",

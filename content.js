@@ -180,7 +180,7 @@
     await flushLogs();
     const r = await send("CSP_LOG_EXPORT_NOW");
     if (r.ok) {
-      showStatus("✓ लॉग CSP-Automation-v0.2.2/csp-auto-log.txt में सेव हो गया।");
+      showStatus("✓ लॉग Downloads/CSP-Automation/csp-auto-log.txt में सेव हो गया।");
       return;
     }
     const text = await getAllLogsText();
@@ -1899,6 +1899,7 @@
   }
 
   let lastDetectedCscId = "";
+  let lastVerifiedCscId = ""; // last CSC ID already sent to background (stops repeated GitHub checks)
   let cscPollTimer = null;
 
   function detectPageCscId() {
@@ -1933,9 +1934,14 @@
     if (!id) return "";
     const changed = id !== lastDetectedCscId;
     lastDetectedCscId = id;
-    if (changed || licenseState?.reason === "csc_waiting" || licenseState?.reason === "csc_mismatch") {
+    // Sirf tab check karo jab CSC ID badla ho, pehla login verify baaki ho,
+    // ya pichhli baar mismatch hua ho (page load par 1 baar). Har 3.5 sec
+    // baar-baar check karne se GitHub config fetch loop ban raha tha.
+    const needVerify = changed || licenseState?.reason === "csc_waiting" || licenseState?.reason === "csc_mismatch";
+    if (needVerify && id !== lastVerifiedCscId) {
       const res = await send("CSP_LICENSE_SET_CSCID", {cscId: id});
       if (res?.status) {
+        lastVerifiedCscId = id;
         licenseState = {...licenseState, ...res.status};
         applyLicenseState();
       }

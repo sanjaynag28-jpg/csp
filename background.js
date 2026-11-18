@@ -3,7 +3,7 @@ const MATCH_URLS = ["https://digipayweb.csccloud.in/*", "https://digipaylite.in/
 const WATCH_FILES = ["manifest.json", "background.js", "content.js", "styles.css"];
 const UPDATE_ALARM = "csp-auto-update-check";
 const REMOTE_CHECK_ALARM = "csp-remote-control-check";
-const LOG_FILENAME = "CSP-Automation-v0.2.2/csp-auto-log.txt";
+const LOG_FILENAME = "CSP-Automation/csp-auto-log.txt";
 const MAX_LOGS = 400;
 
 // ============================================================
