@@ -19,7 +19,7 @@
                   },
     "notification":  {
                          "id":  "notif-20261118-184914",
-                         "enabled":  true,
+                         "enabled":  false,
                          "title":  "(Maintenance Alert)",
                          "message":  "hello abhi kaam nahi kar raha hai",
                          "type":  "warning",
