@@ -1,5 +1,5 @@
 {
-  "version": "0.2.11",
+  "version": "0.2.12",
   "globalEnabled": true,
   "globalMessage": "⏸ यह Extension अभी मेंटेनेंस के लिए बंद है। कृपया Admin से संपर्क करें।",
   "notice": "",
@@ -22,6 +22,27 @@
       "expires": "2026-12-31",
       "name": "Friend 2",
       "plan": "Paused",
+      "autoLockLocalCsc": true
+    },
+    "14a747cb07e8420e521e292ecc0bdcb8534f1a38041d30cec7c5c754f6ab87d2": {
+      "active": true,
+      "expires": "2026-12-31",
+      "name": "Friend 3",
+      "plan": "Standard",
+      "autoLockLocalCsc": true
+    },
+    "771260cb6fc795035e429d1c0af426c9bc3ed86ba6269b85edaa48fdf8e44ac9": {
+      "active": true,
+      "expires": "2026-12-31",
+      "name": "Friend 4",
+      "plan": "Standard",
+      "autoLockLocalCsc": true
+    },
+    "c36099af8d01575cea0b085becce5e84c4bdcfceaa2b529de634ad81337be3dc": {
+      "active": true,
+      "expires": "2026-12-31",
+      "name": "Friend 5",
+      "plan": "Standard",
       "autoLockLocalCsc": true
     },
     "368be3bc891e7e4640d34b14e26ebb4ab774818c53a0a5e912bba06cf6ccaca0": {

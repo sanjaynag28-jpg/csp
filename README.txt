@@ -1,5 +1,5 @@
 ========================================================
-  CSP Automation Helper (v0.2.11) - DigiPay Web & Lite
+  CSP Automation Helper (v0.2.12) - DigiPay Web & Lite
   100% Free GitHub Auto-Update + Remote Key Control
 ========================================================
 
@@ -47,9 +47,10 @@ GitHub पर config.json खोलकर Edit (पेंसिल आइकन)
 - सबको एक साथ बंद करना:
     "globalEnabled": false कर दें।
 - नया अपडेट सभी दोस्तों तक पहुँचाना:
-    manifest.json और config.json दोनों में version बढ़ा दें (जैसे "0.2.12"),
+    manifest.json और config.json दोनों में version बढ़ा दें (जैसे "0.2.13"),
     और बदली हुई फ़ाइलें GitHub पर Upload कर दें — दोस्तों के PC पर Auto-Update
-    अपने आप नई फ़ाइलें डाउनलोड करके Chrome में लोड कर देगा!
+    हर 15 मिनट में अपने आप नई फ़ाइलें डाउनलोड कर लेगा और Extension खुद
+    Chrome में Reload हो जाएगा (कोई manual काम नहीं)।
     (या Publish-To-GitHub.ps1 चला दें — वह सब files अपने आप upload कर देता है।)
 
 --------------------------------------------------------
@@ -61,7 +62,7 @@ PART 2: DOST (इंस्टॉल करने वाले के लिए �
 3. ऊपर दाएँ तरफ़ "Developer mode" ON करें।
 4. "Load unpacked" दबाएँ और D:\CSP-Automation फ़ोल्डर चुनें।
 5. फ़ोल्डर के अंदर "Setup-AutoUpdate.bat" पर 1 बार डबल-क्लिक करें
-   (इससे हर 2 घंटे और Windows स्टार्ट होने पर अपडेट अपने आप हो जाएगा)।
+   (इससे हर 15 मिनट और Windows स्टार्ट होने पर अपडेट अपने आप हो जाएगा)।
 6. DigiPay खोलें, अपनी मिली हुई Access Key (जैसे CSP-DOST1-7429) डालकर "✓ Verify" दबाएँ।
 
 (अगर कभी ऑटो-अपडेट हटाना हो, तो Remove-AutoUpdate.bat पर डबल-क्लिक कर दें।)
