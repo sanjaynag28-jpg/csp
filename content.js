@@ -1933,12 +1933,6 @@
     if (!id) return "";
     const changed = id !== lastDetectedCscId;
     lastDetectedCscId = id;
-    const lockCsc = document.getElementById("csp-lock-csc-row");
-    const lockCscVal = document.getElementById("csp-lock-csc-val");
-    if (lockCsc && lockCscVal) {
-      lockCscVal.textContent = id;
-      lockCsc.classList.add("show");
-    }
     if (changed || licenseState?.reason === "csc_waiting" || licenseState?.reason === "csc_mismatch") {
       const res = await send("CSP_LICENSE_SET_CSCID", {cscId: id});
       if (res?.status) {
@@ -2388,12 +2382,8 @@
       <div id="csp-helper-notice"></div>
       <div id="csp-helper-lockbox">
         <div id="csp-lock-msg" class="csp-lock-msg">🔑 कृपया अपनी Access Key डालकर '✓ Verify' दबाएँ।</div>
-        <div id="csp-lock-csc-row" class="csp-lock-csc-row">
-          <span>🆔 CSC ID: <strong id="csp-lock-csc-val"></strong></span>
-          <button type="button" id="csp-lock-csc-copy" class="csp-lock-copy-btn">📋 कॉपी</button>
-        </div>
         <div class="csp-lock-form">
-          <input type="text" id="csp-lock-key" placeholder="Access Key (जैसे CSP-DOST1-7429)">
+          <input type="text" id="csp-lock-key" placeholder="Access Key डालें">
           <button type="button" id="csp-lock-verify">✓ Verify</button>
         </div>
       </div>
@@ -2478,14 +2468,6 @@
     };
     lockBtn?.addEventListener("click", verifyLockKey);
     lockInput?.addEventListener("keydown", e => { if (e.key === "Enter") verifyLockKey(); });
-    const cscCopyBtn = panel.querySelector("#csp-lock-csc-copy");
-    cscCopyBtn?.addEventListener("click", async () => {
-      const id = detectPageCscId() || lastDetectedCscId;
-      if (!id) return;
-      try { await navigator.clipboard.writeText(id); } catch (_) {}
-      cscCopyBtn.textContent = "✓ कॉपी हुआ";
-      setTimeout(() => { cscCopyBtn.textContent = "📋 कॉपी"; }, 2000);
-    });
     applyPanelMode(panel);
     applyLicenseState(panel);
     refreshMemory();

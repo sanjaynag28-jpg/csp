@@ -97,10 +97,6 @@
 /* Remote Access Lock & Update Notice */
 #csp-helper-lockbox{display:none;background:#2a1420;border:1px solid #ef4444;border-radius:10px;padding:10px;margin:4px 0}
 #csp-helper-lockbox .csp-lock-msg{color:#fecaca;font-size:calc(var(--csp-fs) - 1px);margin-bottom:8px;font-weight:600;white-space:normal;line-height:1.35}
-#csp-helper-lockbox .csp-lock-csc-row{display:none;align-items:center;justify-content:space-between;gap:6px;background:#1e1635;border:1px solid #6366f1;border-radius:7px;padding:4px 8px;margin-bottom:7px;font-size:calc(var(--csp-fs) - 2px);color:#e0e7ff}
-#csp-helper-lockbox .csp-lock-csc-row.show{display:flex}
-#csp-helper-lockbox .csp-lock-copy-btn{background:#253564 !important;border:1px solid #6366f1 !important;padding:3px 8px !important;font-size:calc(var(--csp-fs) - 2px) !important}
-#csp-helper-panel.csp-bar-mode.csp-locked-mode #csp-helper-lockbox .csp-lock-csc-row{margin:0;flex-shrink:0}
 #csp-helper-lockbox .csp-lock-form{display:flex;gap:6px;align-items:center}
 #csp-helper-lockbox input{flex:1;min-width:110px;background:#1a1025;color:#fff;border:1px solid #f87171;border-radius:7px;padding:6px 9px;font-size:var(--csp-fs);text-transform:uppercase}
 #csp-helper-lockbox button{background:#15803d;color:#fff;border:0;border-radius:7px;padding:6px 11px;font-size:calc(var(--csp-fs) - 1px);font-weight:700;cursor:pointer;white-space:nowrap}
