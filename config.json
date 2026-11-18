@@ -1,55 +1,20 @@
 {
-  "version": "0.2.12",
-  "globalEnabled": true,
-  "globalMessage": "⏸ यह Extension अभी मेंटेनेंस के लिए बंद है। कृपया Admin से संपर्क करें।",
-  "notice": "",
-  "keyHashes": {
-    "d492bd45f9445ad2318bec550a824bf732be97bce796b3b9b4b5d7e9c5c7bbcc": {
-      "active": true,
-      "expires": "2099-12-31",
-      "name": "Sanjay Nag (Owner)",
-      "plan": "Admin Lifetime"
-    },
-    "07cad06590dc4fb9e4cbae17f61f7e87b767bd7763b44df42bbf56a165d3b2f3": {
-      "active": true,
-      "expires": "2026-12-31",
-      "name": "Friend 1",
-      "plan": "Standard",
-      "autoLockLocalCsc": true
-    },
-    "0ed0a639ff92540dbf3973860da7a3d93e6a3024bea7ad35bc7844144878544f": {
-      "active": false,
-      "expires": "2026-12-31",
-      "name": "Friend 2",
-      "plan": "Paused",
-      "autoLockLocalCsc": true
-    },
-    "14a747cb07e8420e521e292ecc0bdcb8534f1a38041d30cec7c5c754f6ab87d2": {
-      "active": true,
-      "expires": "2026-12-31",
-      "name": "Friend 3",
-      "plan": "Standard",
-      "autoLockLocalCsc": true
-    },
-    "771260cb6fc795035e429d1c0af426c9bc3ed86ba6269b85edaa48fdf8e44ac9": {
-      "active": true,
-      "expires": "2026-12-31",
-      "name": "Friend 4",
-      "plan": "Standard",
-      "autoLockLocalCsc": true
-    },
-    "c36099af8d01575cea0b085becce5e84c4bdcfceaa2b529de634ad81337be3dc": {
-      "active": true,
-      "expires": "2026-12-31",
-      "name": "Friend 5",
-      "plan": "Standard",
-      "autoLockLocalCsc": true
-    },
-    "368be3bc891e7e4640d34b14e26ebb4ab774818c53a0a5e912bba06cf6ccaca0": {
-      "active": true,
-      "expires": "2026-12-18",
-      "name": "Trial User (30 Days)",
-      "plan": "Free Trial (Multi-PC)"
-    }
-  }
+    "version":  "0.2.12",
+    "globalEnabled":  true,
+    "globalMessage":  "⏸ यह Extension अभी मेंटेनेंस के लिए बंद है। कृपया Admin से संपर्क करें।",
+    "notice":  "",
+    "keyHashes":  {
+                      "d492bd45f9445ad2318bec550a824bf732be97bce796b3b9b4b5d7e9c5c7bbcc":  {
+                                                                                               "active":  true,
+                                                                                               "expires":  "2099-12-31",
+                                                                                               "name":  "Sanjay Nag (Owner)",
+                                                                                               "plan":  "Admin Lifetime"
+                                                                                           },
+                      "368be3bc891e7e4640d34b14e26ebb4ab774818c53a0a5e912bba06cf6ccaca0":  {
+                                                                                               "active":  true,
+                                                                                               "expires":  "2026-12-18",
+                                                                                               "name":  "Trial User (30 Days)",
+                                                                                               "plan":  "Free Trial (Multi-PC)"
+                                                                                           }
+                  }
 }
