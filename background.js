@@ -919,7 +919,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     } else if (msg.type === "CSP_FILL_AADHAAR_MAIN") {
       const {cspExtensionEnabled, cspLicenseStatus} = await chrome.storage.local.get(["cspExtensionEnabled", "cspLicenseStatus"]);
       if (cspLicenseStatus && cspLicenseStatus.allowed === false) return sendResponse({ok: false, reason: "locked"});
-      if (cspExtensionEnabled === false && !msg.data?.manual) return sendResponse({ok: false, reason: "manual_only"});
+      if (cspExtensionEnabled !== true && !msg.data?.manual) return sendResponse({ok: false, reason: "manual_only"});
       const tabId = sender?.tab?.id;
       if (!tabId) return sendResponse({ok: false, reason: "noTab"});
       const res = await fillAadhaarInMainWorld(tabId, msg.data?.digits || "");

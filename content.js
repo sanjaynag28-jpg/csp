@@ -76,7 +76,7 @@
         "cspLicenseStatus"
       ]);
       if (typeof r.cspAutoSkipPopups === "boolean") autoSkipPopups = r.cspAutoSkipPopups;
-      extensionEnabled = typeof r.cspExtensionEnabled === "boolean" ? r.cspExtensionEnabled : true;
+      extensionEnabled = typeof r.cspExtensionEnabled === "boolean" ? r.cspExtensionEnabled : false;
       if (typeof r.cspPreferredDevice === "string") preferredDevice = r.cspPreferredDevice;
       if (r.cspPanelMode === "bar" || r.cspPanelMode === "panel") panelMode = r.cspPanelMode;
       if (typeof r.cspFontSizePx === "number" && r.cspFontSizePx >= 12 && r.cspFontSizePx <= 19) fontSizePx = r.cspFontSizePx;
@@ -2344,9 +2344,10 @@
       autoSkipPopups = true;
       autoLogMode = "off";
       savePrefs({cspPanelMode: panelMode, cspFontSizePx: fontSizePx, cspAutoSaveDelayMs: autoSaveDelayMs, cspAutoSkipPopups: autoSkipPopups, cspAutoLogMode: autoLogMode});
+      setExtensionEnabled(false, true);
       applyPanelMode(panel);
       box.remove();
-      showStatus("✓ सेटिंग्स डिफ़ॉल्ट पर रीसेट हो गईं (नीचे पट्टी, 14px, 2s, लॉग बंद)।");
+      showStatus("✓ सेटिंग्स डिफ़ॉल्ट पर रीसेट हो गईं (Manual, नीचे पट्टी, 14px, 2s, लॉग बंद)।");
     });
   }
 
