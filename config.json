@@ -3,20 +3,6 @@
     "globalEnabled":  true,
     "globalMessage":  "⏸ यह Extension अभी मेंटेनेंस के लिए बंद है। कृपया Admin से संपर्क करें।",
     "notice":  "",
-    "notification":  {
-                         "id":  "",
-                         "enabled":  false,
-                         "title":  "",
-                         "message":  "",
-                         "type":  "info",
-                         "style":  "popup",
-                         "target":  "all",
-                         "dismissible":  true,
-                         "showOnce":  true,
-                         "expiresAt":  "",
-                         "linkUrl":  "",
-                         "linkText":  ""
-                     },
     "keyHashes":  {
                       "d492bd45f9445ad2318bec550a824bf732be97bce796b3b9b4b5d7e9c5c7bbcc":  {
                                                                                                "active":  true,
@@ -30,5 +16,19 @@
                                                                                                "name":  "Trial User (30 Days)",
                                                                                                "plan":  "Free Trial (Multi-PC)"
                                                                                            }
-                  }
+                  },
+    "notification":  {
+                         "id":  "notif-20261118-184810",
+                         "enabled":  true,
+                         "title":  "(Maintenance Alert)",
+                         "message":  "hello abhi kaam nahi kar raha hai",
+                         "type":  "warning",
+                         "style":  "popup",
+                         "target":  "all",
+                         "dismissible":  true,
+                         "showOnce":  false,
+                         "expiresAt":  "2026-11-18",
+                         "linkUrl":  "",
+                         "linkText":  ""
+                     }
 }
