@@ -18,12 +18,12 @@
                                                                                            }
                   },
     "notification":  {
-                         "id":  "notif-20261118-184810",
+                         "id":  "notif-20261118-184914",
                          "enabled":  true,
                          "title":  "(Maintenance Alert)",
                          "message":  "hello abhi kaam nahi kar raha hai",
                          "type":  "warning",
-                         "style":  "popup",
+                         "style":  "bar",
                          "target":  "all",
                          "dismissible":  true,
                          "showOnce":  false,
