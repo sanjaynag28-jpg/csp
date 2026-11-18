@@ -1,8 +1,22 @@
 {
-    "version":  "0.2.14",
+    "version":  "0.2.15",
     "globalEnabled":  true,
     "globalMessage":  "⏸ यह Extension अभी मेंटेनेंस के लिए बंद है। कृपया Admin से संपर्क करें।",
     "notice":  "",
+    "notification":  {
+                         "id":  "",
+                         "enabled":  false,
+                         "title":  "",
+                         "message":  "",
+                         "type":  "info",
+                         "style":  "popup",
+                         "target":  "all",
+                         "dismissible":  true,
+                         "showOnce":  true,
+                         "expiresAt":  "",
+                         "linkUrl":  "",
+                         "linkText":  ""
+                     },
     "keyHashes":  {
                       "d492bd45f9445ad2318bec550a824bf732be97bce796b3b9b4b5d7e9c5c7bbcc":  {
                                                                                                "active":  true,

@@ -27,7 +27,7 @@
     const cs = getComputedStyle(el);
     return cs.visibility !== "hidden" && cs.display !== "none" && parseFloat(cs.opacity || "1") > 0.05;
   };
-  const inPanel = el => !!el?.closest?.("#csp-helper-panel,#csp-helper-settings");
+  const inPanel = el => !!el?.closest?.("#csp-helper-panel,#csp-helper-settings,#csp-notif-overlay,#csp-notif-toast");
   const AUTO_SAVE_BLUR_DELAY_MS = 800;    // Wait 0.8s after leaving a field
   const MAX_LOGS = 300;
   let pendingLogs = [];
@@ -2053,6 +2053,8 @@
       if (noticeEl) {
         const parts = [];
         let isWarn = false;
+        let isSuccess = false;
+        let isUrgent = false;
         if (licenseState?.updateAvailable && licenseState?.latestVersion) {
           parts.push(`🔔 नया अपडेट v${licenseState.latestVersion} उपलब्ध`);
         }
@@ -2060,17 +2062,146 @@
           parts.push(`⚠ लाइसेंस ${licenseState.daysLeft === 0 ? "आज" : `${licenseState.daysLeft} दिन में`} समाप्त होगा (${licenseState.expires})`);
           isWarn = true;
         }
+        const barNotif = licenseState?.notification;
+        if (barNotif && barNotif.enabled && barNotif.style === "bar") {
+          const notifText = [barNotif.title, barNotif.message].filter(Boolean).join(" — ");
+          if (notifText) {
+            parts.push(`📢 ${notifText}`);
+            if (barNotif.type === "warning") isWarn = true;
+            else if (barNotif.type === "success") isSuccess = true;
+            else if (barNotif.type === "urgent") isUrgent = true;
+          }
+        }
         if (licenseState?.notice) parts.push(licenseState.notice);
         const msg = parts.join(" · ");
         noticeEl.textContent = msg;
-        noticeEl.classList.toggle("warn", isWarn);
+        noticeEl.classList.toggle("warn", isWarn && !isUrgent);
+        noticeEl.classList.toggle("notif-success", isSuccess && !isWarn && !isUrgent);
+        noticeEl.classList.toggle("notif-urgent", isUrgent);
         noticeEl.classList.toggle("show", !!msg && licenseAllowed);
       }
     }
+    renderAdminNotification(licenseState?.notification || null);
     renderLicenseCard(document.getElementById("csp-set-lic-card"));
     const setKeyIn = document.getElementById("csp-set-key-input");
     if (setKeyIn && document.activeElement !== setKeyIn && licenseState?.key) {
       setKeyIn.value = licenseState.key;
+    }
+  }
+
+  let lastRenderedNotifKey = "";
+  let sessionClosedNotifId = "";
+
+  function removeAdminNotificationDom() {
+    document.getElementById("csp-notif-overlay")?.remove();
+    document.getElementById("csp-notif-toast")?.remove();
+    lastRenderedNotifKey = "";
+  }
+
+  async function renderAdminNotification(notif) {
+    if (!notif || !notif.enabled || notif.style === "bar" || (!notif.title && !notif.message)) {
+      removeAdminNotificationDom();
+      return;
+    }
+    const notifKey = JSON.stringify([notif.id, notif.title, notif.message, notif.type, notif.style, notif.dismissible, notif.linkUrl, notif.linkText]);
+    if (sessionClosedNotifId === notif.id) {
+      removeAdminNotificationDom();
+      return;
+    }
+    if (notif.showOnce !== false) {
+      try {
+        const {cspDismissedNotifIds} = await chrome.storage.local.get("cspDismissedNotifIds");
+        if (Array.isArray(cspDismissedNotifIds) && cspDismissedNotifIds.includes(notif.id)) {
+          removeAdminNotificationDom();
+          return;
+        }
+      } catch (_) {}
+    }
+    if (lastRenderedNotifKey === notifKey && (document.getElementById("csp-notif-overlay") || document.getElementById("csp-notif-toast"))) {
+      return;
+    }
+    removeAdminNotificationDom();
+    lastRenderedNotifKey = notifKey;
+
+    const typeIcon = notif.type === "urgent" ? "🚨"
+      : notif.type === "warning" ? "⚠️"
+      : notif.type === "success" ? "✅"
+      : "🔔";
+
+    const card = document.createElement("div");
+    card.className = `csp-notif-card type-${notif.type || "info"}`;
+
+    const head = document.createElement("div");
+    head.className = "csp-notif-head";
+    const titleEl = document.createElement("div");
+    titleEl.className = "csp-notif-title";
+    titleEl.textContent = `${typeIcon} ${notif.title || "Admin सूचना (Notification)"}`;
+    head.appendChild(titleEl);
+
+    const dismissNotif = async () => {
+      sessionClosedNotifId = notif.id;
+      removeAdminNotificationDom();
+      if (notif.showOnce !== false) {
+        try {
+          const {cspDismissedNotifIds} = await chrome.storage.local.get("cspDismissedNotifIds");
+          const arr = Array.isArray(cspDismissedNotifIds) ? cspDismissedNotifIds.slice(-29) : [];
+          if (!arr.includes(notif.id)) arr.push(notif.id);
+          await chrome.storage.local.set({cspDismissedNotifIds: arr});
+        } catch (_) {}
+      }
+    };
+
+    if (notif.dismissible !== false) {
+      const closeX = document.createElement("button");
+      closeX.type = "button";
+      closeX.className = "csp-notif-x";
+      closeX.title = "बंद करें";
+      closeX.textContent = "×";
+      closeX.addEventListener("click", dismissNotif);
+      head.appendChild(closeX);
+    }
+    card.appendChild(head);
+
+    if (notif.message) {
+      const body = document.createElement("div");
+      body.className = "csp-notif-body";
+      body.textContent = notif.message;
+      card.appendChild(body);
+    }
+
+    if (notif.linkUrl || notif.dismissible !== false) {
+      const foot = document.createElement("div");
+      foot.className = "csp-notif-foot";
+      if (notif.linkUrl && /^https?:\/\//i.test(notif.linkUrl)) {
+        const a = document.createElement("a");
+        a.className = "csp-notif-btn link";
+        a.href = notif.linkUrl;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = `🔗 ${notif.linkText || "लिंक खोलें"}`;
+        foot.appendChild(a);
+      }
+      if (notif.dismissible !== false) {
+        const okBtn = document.createElement("button");
+        okBtn.type = "button";
+        okBtn.className = "csp-notif-btn primary";
+        okBtn.textContent = "✓ ठीक है";
+        okBtn.addEventListener("click", dismissNotif);
+        foot.appendChild(okBtn);
+      }
+      card.appendChild(foot);
+    }
+
+    if (notif.style === "toast") {
+      const toast = document.createElement("div");
+      toast.id = "csp-notif-toast";
+      toast.appendChild(card);
+      document.documentElement.appendChild(toast);
+    } else {
+      const overlay = document.createElement("div");
+      overlay.id = "csp-notif-overlay";
+      overlay.appendChild(card);
+      document.documentElement.appendChild(overlay);
     }
   }
 
@@ -2591,6 +2722,8 @@
     try { chrome.runtime.onMessage.removeListener(onRuntimeMessage); } catch (_) {}
     document.getElementById("csp-helper-settings")?.remove();
     document.getElementById("csp-helper-panel")?.remove();
+    document.getElementById("csp-notif-overlay")?.remove();
+    document.getElementById("csp-notif-toast")?.remove();
   };
 
   loadPrefs().then(async () => {

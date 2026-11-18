@@ -127,4 +127,35 @@
 #csp-helper-notice{display:none;background:#1e3a5f;border:1px solid #38bdf8;color:#e0f2fe;border-radius:7px;padding:4px 9px;font-size:calc(var(--csp-fs) - 2px);font-weight:600;margin-bottom:7px}
 #csp-helper-notice.show{display:block}
 #csp-helper-notice.warn{background:#422006;border-color:#f59e0b;color:#fde68a}
+#csp-helper-notice.notif-success{background:#14532d;border-color:#22c55e;color:#dcfce7}
+#csp-helper-notice.notif-urgent{background:#7f1d1d;border-color:#ef4444;color:#fee2e2}
 #csp-helper-panel.csp-bar-mode #csp-helper-notice.show{display:inline-flex;align-items:center;margin:0;flex-shrink:0}
+
+/* Admin Push Notification (Popup Modal & Floating Toast) */
+#csp-notif-overlay{position:fixed;inset:0;z-index:2147483647;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Segoe UI,system-ui,-apple-system,sans-serif}
+.csp-notif-card{width:100%;max-width:440px;background:#ffffff;color:#111827;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.35);overflow:hidden;border:2px solid #2563eb;animation:cspNotifPop .18s ease-out}
+.csp-notif-card.type-success{border-color:#16a34a}
+.csp-notif-card.type-warning{border-color:#d97706}
+.csp-notif-card.type-urgent{border-color:#dc2626}
+.csp-notif-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:#eff6ff;color:#1e3a8a;border-bottom:1px solid #dbeafe}
+.csp-notif-card.type-success .csp-notif-head{background:#f0fdf4;color:#166534;border-bottom-color:#bbf7d0}
+.csp-notif-card.type-warning .csp-notif-head{background:#fffbeb;color:#92400e;border-bottom-color:#fde68a}
+.csp-notif-card.type-urgent .csp-notif-head{background:#fef2f2;color:#991b1b;border-bottom-color:#fecaca}
+.csp-notif-title{font-size:15px;font-weight:700;line-height:1.3}
+.csp-notif-x{background:transparent;border:0;color:inherit;font-size:20px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px;opacity:.75}
+.csp-notif-x:hover{opacity:1;background:rgba(0,0,0,.08)}
+.csp-notif-body{padding:14px 16px;font-size:14px;line-height:1.55;color:#1f2937;white-space:pre-wrap;word-break:break-word;max-height:55vh;overflow-y:auto}
+.csp-notif-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 16px 14px;background:#f8fafc;border-top:1px solid #e5e7eb}
+.csp-notif-btn{border:0;border-radius:8px;padding:8px 16px;font-size:13.5px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.csp-notif-btn.primary{background:#2563eb;color:#ffffff}
+.csp-notif-card.type-success .csp-notif-btn.primary{background:#16a34a}
+.csp-notif-card.type-warning .csp-notif-btn.primary{background:#d97706}
+.csp-notif-card.type-urgent .csp-notif-btn.primary{background:#dc2626}
+.csp-notif-btn.link{background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe}
+.csp-notif-btn:hover{filter:brightness(1.06)}
+
+#csp-notif-toast{position:fixed;top:16px;right:16px;z-index:2147483647;width:360px;max-width:calc(100vw - 32px);font-family:Segoe UI,system-ui,-apple-system,sans-serif}
+#csp-notif-toast .csp-notif-card{box-shadow:0 12px 32px rgba(0,0,0,.24)}
+#csp-notif-toast .csp-notif-body{padding:10px 14px;font-size:13.5px;max-height:220px}
+#csp-notif-toast .csp-notif-foot{padding:8px 14px 10px}
+@keyframes cspNotifPop{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}

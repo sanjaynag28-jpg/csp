@@ -78,6 +78,44 @@ function maskCscId(id12) {
   return d.length === 12 ? `${d.slice(0, 4)}****${d.slice(-4)}` : "";
 }
 
+function resolveActiveNotification(cfg, userKeyHash = "") {
+  const n = cfg && typeof cfg.notification === "object" ? cfg.notification : null;
+  if (!n || n.enabled !== true) return null;
+  const title = String(n.title || "").trim();
+  const message = String(n.message || "").trim();
+  if (!title && !message) return null;
+  const expiresAt = String(n.expiresAt || "").trim();
+  if (expiresAt && /^\d{4}-\d{2}-\d{2}$/.test(expiresAt) && getTodayIsoDate() > expiresAt) {
+    return null;
+  }
+  const target = String(n.target || "all").trim().toLowerCase();
+  if (target && target !== "all") {
+    if (!userKeyHash || target !== String(userKeyHash).trim().toLowerCase()) return null;
+  }
+  const validTypes = ["info", "success", "warning", "urgent"];
+  const validStyles = ["popup", "toast", "bar"];
+  const type = validTypes.includes(String(n.type || "").toLowerCase()) ? String(n.type).toLowerCase() : "info";
+  const style = validStyles.includes(String(n.style || "").toLowerCase()) ? String(n.style).toLowerCase() : "popup";
+  let linkUrl = String(n.linkUrl || "").trim();
+  if (linkUrl && !/^https?:\/\//i.test(linkUrl)) linkUrl = "";
+  const linkText = linkUrl ? String(n.linkText || "लिंक खोलें").trim() : "";
+  const id = String(n.id || "").trim() || `${type}:${style}:${title.slice(0, 24)}:${message.slice(0, 32)}`;
+  return {
+    id,
+    enabled: true,
+    title,
+    message,
+    type,
+    style,
+    target: target || "all",
+    dismissible: n.dismissible !== false,
+    showOnce: n.showOnce !== false,
+    expiresAt,
+    linkUrl,
+    linkText
+  };
+}
+
 async function checkRemoteControl(force = false, incomingCscId = "") {
   const localVer = chrome.runtime.getManifest().version;
   if (!isRemoteControlConfigured()) {
@@ -130,6 +168,8 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
     const latestVersion = String(cfg?.version || localVer);
     const updateAvailable = compareVersions(latestVersion, localVer) > 0;
     const notice = String(cfg?.notice || "").trim();
+    const keyHash = userKey ? await hashAccessKey(userKey) : "";
+    const notification = resolveActiveNotification(cfg, keyHash);
 
     if (cfg?.globalEnabled === false) {
       const status = {
@@ -144,6 +184,7 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
         plan: prev?.plan || "",
         phone: prev?.phone || "",
         notice,
+        notification,
         localVersion: localVer,
         latestVersion,
         updateAvailable,
@@ -166,6 +207,7 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
         plan: "",
         phone: "",
         notice,
+        notification,
         localVersion: localVer,
         latestVersion,
         updateAvailable,
@@ -176,7 +218,6 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
     }
 
     const hashMap = (cfg && typeof cfg.keyHashes === "object" && cfg.keyHashes) ? cfg.keyHashes : {};
-    const keyHash = await hashAccessKey(userKey);
     let entry = hashMap[keyHash] || null;
     if (!entry) {
       const keysMap = (cfg && typeof cfg.keys === "object" && cfg.keys) ? cfg.keys : {};
@@ -197,6 +238,7 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
         plan: "",
         phone: "",
         notice,
+        notification,
         localVersion: localVer,
         latestVersion,
         updateAvailable,
@@ -225,6 +267,7 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
         plan: entryPlan,
         phone: entryPhone,
         notice,
+        notification,
         localVersion: localVer,
         latestVersion,
         updateAvailable,
@@ -247,6 +290,7 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
         plan: entryPlan,
         phone: entryPhone,
         notice,
+        notification,
         localVersion: localVer,
         latestVersion,
         updateAvailable,
@@ -277,6 +321,7 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
           phone: entryPhone,
           cscLockLabel: "🔒 CSC ID वेरिफाई बाकी",
           notice,
+          notification,
           localVersion: localVer,
           latestVersion,
           updateAvailable,
@@ -300,6 +345,7 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
           phone: entryPhone,
           cscLockLabel: "❌ CSC ID मैच नहीं",
           notice,
+          notification,
           localVersion: localVer,
           latestVersion,
           updateAvailable,
@@ -330,6 +376,7 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
             phone: entryPhone,
             cscLockLabel: "❌ CSC ID मैच नहीं",
             notice,
+            notification,
             localVersion: localVer,
             latestVersion,
             updateAvailable,
@@ -359,6 +406,7 @@ async function checkRemoteControl(force = false, incomingCscId = "") {
       cscLockLabel,
       detectedCscId: currentCscId ? maskCscId(currentCscId) : "",
       notice,
+      notification,
       localVersion: localVer,
       latestVersion,
       updateAvailable,
