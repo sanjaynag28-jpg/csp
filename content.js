@@ -47,10 +47,10 @@
   let licenseState = {allowed: true, configured: false, reason: "local", message: "", key: "", name: "", expires: "", notice: "", latestVersion: "", updateAvailable: false};
   let hooksAttached = false;
   let preferredDevice = "";
-  let panelMode = "panel"; // "panel" (box) or "bar" (bottom single-line strip)
+  let panelMode = "bar"; // "bar" (bottom single-line strip, default) or "panel" (box)
   let fontSizePx = 14;     // 12..19 px (bigger, crisp default)
   let autoSaveDelayMs = 2000; // 0 (manual only) or 1000..4000 ms
-  let autoLogMode = "errors"; // "errors" (only on WARN/ERROR) | "off" | "always"
+  let autoLogMode = "off"; // "off" (default, manual only) | "errors" | "always"
   let savedBoxPos = null;
   let autoClosedChangePwd = false;
   let autoNavigatedToAeps = false;
@@ -2191,8 +2191,8 @@
       <div class="csp-set-row">
         <label>ऑटो लॉग फाइल सेव</label>
         <select id="csp-set-logmode">
-          <option value="errors" ${autoLogMode === "errors" ? "selected" : ""}>सिर्फ Error / Problem आने पर (डिफ़ॉल्ट)</option>
-          <option value="off" ${autoLogMode === "off" ? "selected" : ""}>बंद (सिर्फ Manual बटन से)</option>
+          <option value="off" ${autoLogMode === "off" ? "selected" : ""}>बंद (सिर्फ Manual बटन से) (डिफ़ॉल्ट)</option>
+          <option value="errors" ${autoLogMode === "errors" ? "selected" : ""}>सिर्फ Error / Problem आने पर</option>
           <option value="always" ${autoLogMode === "always" ? "selected" : ""}>हमेशा (हर एक्टिविटी पर)</option>
         </select>
       </div>
@@ -2338,14 +2338,15 @@
 
     // Reset button
     box.querySelector("#csp-set-reset").addEventListener("click", () => {
+      panelMode = "bar";
       fontSizePx = 14;
       autoSaveDelayMs = 2000;
       autoSkipPopups = true;
-      autoLogMode = "errors";
-      savePrefs({cspFontSizePx: fontSizePx, cspAutoSaveDelayMs: autoSaveDelayMs, cspAutoSkipPopups: autoSkipPopups, cspAutoLogMode: autoLogMode});
+      autoLogMode = "off";
+      savePrefs({cspPanelMode: panelMode, cspFontSizePx: fontSizePx, cspAutoSaveDelayMs: autoSaveDelayMs, cspAutoSkipPopups: autoSkipPopups, cspAutoLogMode: autoLogMode});
       applyPanelMode(panel);
       box.remove();
-      showStatus("✓ सेटिंग्स डिफ़ॉल्ट पर रीसेट हो गईं (14px, 2s, Error-only log)।");
+      showStatus("✓ सेटिंग्स डिफ़ॉल्ट पर रीसेट हो गईं (नीचे पट्टी, 14px, 2s, लॉग बंद)।");
     });
   }
 

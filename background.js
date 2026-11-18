@@ -414,7 +414,7 @@ async function getAutoLogMode() {
       return cspAutoLogMode;
     }
   } catch (_) {}
-  return "errors"; // Smart default: ONLY auto-save file when ERROR/WARN happens
+  return "off"; // Default: auto-save log file OFF (manual export only)
 }
 
 async function exportLogsToDisk(force = false) {

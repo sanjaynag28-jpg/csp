@@ -10,3 +10,5 @@ Update.ps1
 AutoUpdateSilent.vbs
 Setup-AutoUpdate.bat
 Remove-AutoUpdate.bat
+Admin-Panel.ps1
+Admin-Panel.bat
