@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <title>CSP Automation Helper - Installation Guide</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fa; color: #111827; margin: 0; padding: 20px; line-height: 1.6; }
+    .container { max-width: 720px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    h1 { color: #1d4ed8; margin-top: 0; font-size: 24px; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; }
+    .key-box { background: #eff6ff; border: 2px solid #3b82f6; border-radius: 10px; padding: 16px; margin: 20px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .key-text { font-family: Consolas, monospace; font-size: 22px; font-weight: bold; color: #1d4ed8; background: #ffffff; padding: 6px 14px; border-radius: 6px; border: 1px solid #bfdbfe; }
+    .copy-btn { background: #16a34a; color: white; border: none; padding: 8px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+    .copy-btn:hover { background: #15803d; }
+    .step { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 18px; margin: 14px 0; border-radius: 0 8px 8px 0; }
+    .step h3 { margin: 0 0 6px 0; color: #1e3a8a; font-size: 16px; }
+    code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; }
+    th { background: #f1f5f9; color: #1e293b; }
+    .footer { margin-top: 25px; padding-top: 15px; border-top: 1px solid #e5e7eb; font-size: 13px; color: #64748b; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ CSP Automation Helper — इंस्टॉलेशन गाइड</h1>
+    
+    <div class="key-box">
+      <div>
+        <strong style="color:#1e3a8a; font-size:15px;">🔑 Access Key:</strong><br>
+        <span style="font-size:13px; color:#4b5563;">एक्सटेंशन शुरू करने के लिए यह Key डालें:</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="key-text" id="accessKeyText">TEST123</span>
+        <button class="copy-btn" onclick="copyKey()">Key Copy करें</button>
+      </div>
+    </div>
+
+    <h2>📖 आसान सेटअप स्टेप्स (सिर्फ़ 1 बार)</h2>
+
+    <div class="step">
+      <h3>1. फ़ोल्डर को सुरक्षित जगह रखें</h3>
+      इस Extract (अनज़िप) किए हुए फ़ोल्डर को किसी पक्की जगह पर रखें (जैसे <code>D:\CSP-Automation</code>)। इसे बाद में डिलीट या रीनेम न करें।
+    </div>
+
+    <div class="step">
+      <h3>2. Chrome Extensions खोलें</h3>
+      Google Chrome खोलें और ऊपर एड्रेस बार में <code>chrome://extensions</code> लिखकर Enter दबाएँ।
+    </div>
+
+    <div class="step">
+      <h3>3. Developer Mode चालू करें</h3>
+      Chrome में ऊपर दाएँ कोने में <strong>Developer mode</strong> का स्विच चालू (ON) करें।
+    </div>
+
+    <div class="step">
+      <h3>4. Load Unpacked से फ़ोल्डर जोड़ें</h3>
+      ऊपर बाएँ कोने में <strong>"Load unpacked"</strong> बटन दबाएँ और यही फ़ोल्डर चुनें। एक्सटेंशन Chrome में जुड़ जाएगा।
+    </div>
+
+    <div class="step">
+      <h3>5. ऑटो-अपडेट चालू करें</h3>
+      फ़ोल्डर के अंदर मौजूद <strong>Setup-AutoUpdate.bat</strong> फ़ाइल पर 1 बार डबल-क्लिक करें। आगे के सभी अपडेट अपने आप मिलते रहेंगे।
+    </div>
+
+    <div class="step">
+      <h3>6. DigiPay में Key वेरिफाई करें</h3>
+      DigiPay Web या Lite खोलें। नीचे पट्टी में Access Key बॉक्स में <code>TEST123</code> डालें और <strong>"✓ Verify"</strong> दबाएँ।
+    </div>
+
+    <h2>⌨️ कीबोर्ड शॉर्टकट</h2>
+    <table>
+      <tr><th>शॉर्टकट</th><th>कार्य</th></tr>
+      <tr><td><code>Alt + 1</code></td><td>Balance Enquiry टैब खोलें</td></tr>
+      <tr><td><code>Alt + 2</code></td><td>Cash Withdrawal टैब खोलें</td></tr>
+      <tr><td><code>Alt + Shift + P</code></td><td>हेल्पर पट्टी/पैनल छुपाएँ या दिखाएँ</td></tr>
+    </table>
+
+    <div class="footer">
+      🔒 <strong>सुरक्षा गारंटी:</strong> ग्राहक का कोई भी डेटा किसी सर्वर पर नहीं जाता। सभी डेटा आपके कंप्यूटर में सुरक्षित रहता है।
+    </div>
+  </div>
+
+  <script>
+    function copyKey() {
+      navigator.clipboard.writeText("TEST123").then(() => {
+        alert("✅ Key (TEST123) कॉपी हो गई! अब DigiPay में पेस्ट करें।");
+      });
+    }
+  </script>
+</body>
+</html>
